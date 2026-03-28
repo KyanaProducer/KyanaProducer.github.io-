@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MLB順位予想</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Bebas+Neue&display=swap');
+
+  :root {
+    --cl:   #0a0a14;
+    --cl2:  #12121f;
+    --cl3:  #1a1a2e;
+    --acc:  #e8c94a;
+    --red:  #e84a4a;
+    --text: #f0f0f8;
+    --sub:  #8888aa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--cl);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(28px, 5vw, 48px);
+    letter-spacing: 0.08em;
+    color: var(--acc);
+    text-align: center;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--sub);
+    font-size: 12px;
+    margin-bottom: 8px;
+    letter-spacing: 0.1em;
+  }
+  .instruction {
+    text-align: center;
+    color: var(--sub);
+    font-size: 12px;
+    margin-bottom: 28px;
+  }
+
+  .error-banner {
+    max-width: 1100px;
+    margin: 0 auto 16px;
+    background: #2a0d0d;
+    border: 1.5px solid var(--red);
+    border-radius: 8px;
+    padding: 10px 16px;
+    color: var(--red);
+    font-size: 13px;
+    display: none;
+    text-align: center;
+  }
+  .error-banner.show { display: block; }
+
+  /* リーグ */
+  .league-wrap {
+    max-width: 1100px;
+    margin: 0 auto 28px;
+  }
+
+  .league-header {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 0.14em;
+    padding: 10px 20px;
+    border-radius: 8px 8px 0 0;
+  }
+  .al .league-header { background: linear-gradient(90deg,#1a2a4a,#0d1a33); border-bottom: 2px solid #4a90e8; color: #7ab8ff; }
+  .nl .league-header { background: linear-gradient(90deg,#2a1a1a,#331a0d); border-bottom: 2px solid #e87a4a; color: #ffb87a; }
+
+  .league-body {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1px solid #1e1e35;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+  }
+
+  .division-col {
+    padding: 14px 12px;
+    border-right: 1px solid #1e1e35;
+  }
+  .division-col:last-child { border-right: none; }
+
+  .division-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    color: var(--sub);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #1e1e35;
+    text-align: center;
+  }
+
+  /* チーム行 */
+  .team-list { display: flex; flex-direction: column; gap: 5px; }
+
+  .team-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    background: var(--cl2);
+    border: 1.5px solid transparent;
+    border-radius: 7px;
+    cursor: grab;
+    user-select: none;
+    transition: border-color 0.15s, background 0.15s, opacity 0.15s;
+  }
+  .team-row:active { cursor: grabbing; }
+  .team-row.dragging { opacity: 0.35; }
+  .team-row.drag-over-top {
+    border-top-color: var(--acc);
+    background: #1c1c30;
+  }
+  .team-row.drag-over-bottom {
+    border-bottom-color: var(--acc);
+    background: #1c1c30;
+  }
+
+  .rank-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    width: 22px;
+    text-align: center;
+    flex-shrink: 0;
+    color: var(--sub);
+    line-height: 1;
+  }
+  .team-row[data-rank="1"] .rank-num { color: var(--acc); }
+  .team-row[data-rank="2"] .rank-num { color: #c0c0d8; }
+  .team-row[data-rank="3"] .rank-num { color: #c8884a; }
+
+  /* チームアイコン：塗り丸 */
+  .team-icon {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1;
+  }
+
+  .team-info { flex: 1; min-width: 0; }
+  .team-name-ja { font-size: 12px; font-weight: 700; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .team-name-en { font-size: 10px; color: var(--sub); letter-spacing: 0.04em; }
+
+  .drag-handle {
+    color: #33334a;
+    font-size: 14px;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  /* ボタン */
+  .actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .btn {
+    padding: 12px 28px;
+    border-radius: 8px;
+    border: none;
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: transform 0.15s, opacity 0.15s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0); opacity: 0.85; }
+  .btn-secondary { background: var(--cl2); color: var(--text); border: 1.5px solid #2a2a50; }
+  .btn-save { background: #4ae8c9; color: #0a0a14; }
+
+  /* キャプチャ用 */
+  #capture-card {
+    position: fixed;
+    left: -9999px; top: 0;
+    width: 1000px;
+    background: #0a0a14;
+    padding: 30px 32px 34px;
+    font-family: 'Noto Sans JP', sans-serif;
+  }
+  .cap-title { font-family:'Bebas Neue',sans-serif; font-size:32px; color:var(--acc); text-align:center; letter-spacing:0.1em; margin-bottom:4px; }
+  .cap-sub { text-align:center; color:var(--sub); font-size:11px; letter-spacing:0.1em; margin-bottom:18px; }
+  .cap-league { margin-bottom:14px; }
+  .cap-lg-hd { font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:0.12em; padding:6px 14px; border-radius:4px; margin-bottom:8px; }
+  .cap-divs { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .cap-div-title { font-family:'Bebas Neue',sans-serif; font-size:12px; letter-spacing:0.1em; color:var(--sub); margin-bottom:5px; text-align:center; }
+  .cap-row { display:flex; align-items:center; gap:6px; padding:5px 8px; background:var(--cl2); border-radius:5px; margin-bottom:3px; }
+  .cap-num { font-family:'Bebas Neue',sans-serif; font-size:18px; width:18px; text-align:center; color:var(--sub); line-height:1; flex-shrink:0; }
+  .cap-row[data-rank="1"] .cap-num { color:var(--acc); }
+  .cap-row[data-rank="2"] .cap-num { color:#c0c0d8; }
+  .cap-row[data-rank="3"] .cap-num { color:#c8884a; }
+  .cap-icon { width:24px; height:24px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:9px; font-family:'Bebas Neue',sans-serif; }
+  .cap-name { font-size:12px; font-weight:700; }
+  .cap-footer { text-align:right; margin-top:12px; color:#44445a; font-size:10px; letter-spacing:0.08em; }
+
+  @media (max-width: 680px) {
+    .league-body { grid-template-columns: 1fr; }
+    .division-col { border-right: none; border-bottom: 1px solid #1e1e35; }
+    .division-col:last-child { border-bottom: none; }
+  }
+</style>
+</head>
+<body>
+
+<h1>MLB 順位予想</h1>
+<p class="subtitle">AMERICAN LEAGUE &amp; NATIONAL LEAGUE</p>
+<p class="instruction">↕ 各チームをドラッグして順位を並び替えてください</p>
+
+<div class="error-banner" id="error-banner"></div>
+
+<div id="main-wrap"></div>
+
+<div class="actions" style="margin-bottom:0">
+  <button class="btn btn-secondary" onclick="resetAll()">リセット</button>
+  <button class="btn btn-save" onclick="saveImage()">📷 画像として保存</button>
+</div>
+
+<div id="capture-card"></div>
+
+<script>
+// チームデータ: [id, 略称(表示), 日本語名, チームカラー(背景), 文字色]
+const LEAGUES = {
+  al: {
+    label: 'American League　ア・リーグ',
+    headerStyle: 'background:linear-gradient(90deg,#1a2a4a,#0d1a33);border-bottom:2px solid #4a90e8;color:#7ab8ff;',
+    divisions: {
+      east: {
+        label: 'East Division',
+        teams: [
+          { id:'nyy', abbr:'NYY', name:'ニューヨーク・ヤンキース',   bg:'#1a1a1a', fg:'#c8c8c8' },
+          { id:'bos', abbr:'BOS', name:'ボストン・レッドソックス',    bg:'#bd3039', fg:'#ffffff' },
+          { id:'tor', abbr:'TOR', name:'トロント・ブルージェイズ',    bg:'#134a8e', fg:'#ffffff' },
+          { id:'tb',  abbr:'TB',  name:'タンパベイ・レイズ',         bg:'#092c5c', fg:'#8fbce6' },
+          { id:'bal', abbr:'BAL', name:'ボルチモア・オリオールズ',   bg:'#df4601', fg:'#ffffff' },
+        ],
+      },
+      central: {
+        label: 'Central Division',
+        teams: [
+          { id:'min', abbr:'MIN', name:'ミネソタ・ツインズ',         bg:'#002b5c', fg:'#d31145' },
+          { id:'cle', abbr:'CLE', name:'クリーブランド・ガーディアンズ', bg:'#00385d', fg:'#e31937' },
+          { id:'kc',  abbr:'KC',  name:'カンザスシティ・ロイヤルズ', bg:'#004687', fg:'#bd9b60' },
+          { id:'cws', abbr:'CWS', name:'シカゴ・ホワイトソックス',   bg:'#27251f', fg:'#c4ced4' },
+          { id:'det', abbr:'DET', name:'デトロイト・タイガース',      bg:'#0c2c56', fg:'#fa4616' },
+        ],
+      },
+      west: {
+        label: 'West Division',
+        teams: [
+          { id:'hou', abbr:'HOU', name:'ヒューストン・アストロズ',    bg:'#002d62', fg:'#eb6e1f' },
+          { id:'tex', abbr:'TEX', name:'テキサス・レンジャーズ',      bg:'#003278', fg:'#c0111f' },
+          { id:'sea', abbr:'SEA', name:'シアトル・マリナーズ',        bg:'#0c2c56', fg:'#005c5c' },
+          { id:'laa', abbr:'LAA', name:'ロサンゼルス・エンゼルス',   bg:'#ba0021', fg:'#ffffff' },
+          { id:'oak', abbr:'ATH', name:'アスレティックス',           bg:'#003831', fg:'#efb21e' },
+        ],
+      },
+    },
+  },
+  nl: {
+    label: 'National League　ナ・リーグ',
+    headerStyle: 'background:linear-gradient(90deg,#2a1a1a,#331a0d);border-bottom:2px solid #e87a4a;color:#ffb87a;',
+    divisions: {
+      east: {
+        label: 'East Division',
+        teams: [
+          { id:'atl', abbr:'ATL', name:'アトランタ・ブレーブス',     bg:'#ce1141', fg:'#ffffff' },
+          { id:'phi', abbr:'PHI', name:'フィラデルフィア・フィリーズ', bg:'#e81828', fg:'#ffffff' },
+          { id:'nym', abbr:'NYM', name:'ニューヨーク・メッツ',        bg:'#002d72', fg:'#ff5910' },
+          { id:'mia', abbr:'MIA', name:'マイアミ・マーリンズ',        bg:'#00a3e0', fg:'#ef3340' },
+          { id:'wsh', abbr:'WSH', name:'ワシントン・ナショナルズ',    bg:'#ab0003', fg:'#ffffff' },
+        ],
+      },
+      central: {
+        label: 'Central Division',
+        teams: [
+          { id:'mil', abbr:'MIL', name:'ミルウォーキー・ブルワーズ',  bg:'#12284b', fg:'#b6922e' },
+          { id:'chc', abbr:'CHC', name:'シカゴ・カブス',             bg:'#0e3386', fg:'#cc3433' },
+          { id:'cin', abbr:'CIN', name:'シンシナティ・レッズ',        bg:'#c6011f', fg:'#ffffff' },
+          { id:'stl', abbr:'STL', name:'セントルイス・カーディナルス', bg:'#c41e3a', fg:'#fedb00' },
+          { id:'pit', abbr:'PIT', name:'ピッツバーグ・パイレーツ',    bg:'#27251f', fg:'#fdb827' },
+        ],
+      },
+      west: {
+        label: 'West Division',
+        teams: [
+          { id:'lad', abbr:'LAD', name:'ロサンゼルス・ドジャース',    bg:'#005a9c', fg:'#ffffff' },
+          { id:'sf',  abbr:'SF',  name:'サンフランシスコ・ジャイアンツ', bg:'#fd5a1e', fg:'#27251f' },
+          { id:'ari', abbr:'ARI', name:'アリゾナ・ダイヤモンドバックス', bg:'#a71930', fg:'#e3d4ad' },
+          { id:'sd',  abbr:'SD',  name:'サンディエゴ・パドレス',      bg:'#2f241d', fg:'#ffc425' },
+          { id:'col', abbr:'COL', name:'コロラド・ロッキーズ',        bg:'#33006f', fg:'#c4ced4' },
+        ],
+      },
+    },
+  },
+};
+
+// state: 各地区のチームID順序
+const state = {};
+for (const lg in LEAGUES) {
+  state[lg] = {};
+  for (const dv in LEAGUES[lg].divisions) {
+    state[lg][dv] = LEAGUES[lg].divisions[dv].teams.map(t => t.id);
+  }
+}
+
+function getTeam(id) {
+  for (const lg in LEAGUES) for (const dv in LEAGUES[lg].divisions) {
+    const t = LEAGUES[lg].divisions[dv].teams.find(t => t.id === id);
+    if (t) return t;
+  }
+}
+
+// ---- ドラッグ状態 ----
+let dragId = null;
+let dragLg = null;
+let dragDv = null;
+
+function buildUI() {
+  const wrap = document.getElementById('main-wrap');
+  wrap.innerHTML = '';
+  for (const lg in LEAGUES) {
+    const lgData = LEAGUES[lg];
+    const lgWrap = document.createElement('div');
+    lgWrap.className = `league-wrap`;
+
+    const hd = document.createElement('div');
+    hd.className = 'league-header';
+    hd.style.cssText = lgData.headerStyle;
+    hd.textContent = lgData.label;
+    lgWrap.appendChild(hd);
+
+    const body = document.createElement('div');
+    body.className = 'league-body';
+
+    for (const dv in lgData.divisions) {
+      const dvData = lgData.divisions[dv];
+      const col = document.createElement('div');
+      col.className = 'division-col';
+      col.innerHTML = `<div class="division-title">${dvData.label}</div>`;
+
+      const list = document.createElement('div');
+      list.className = 'team-list';
+      list.dataset.league = lg;
+      list.dataset.div = dv;
+
+      state[lg][dv].forEach((id, i) => {
+        const t = getTeam(id);
+        const row = document.createElement('div');
+        row.className = 'team-row';
+        row.draggable = true;
+        row.dataset.id = id;
+        row.dataset.league = lg;
+        row.dataset.div = dv;
+        row.dataset.rank = i + 1;
+        row.innerHTML = `
+          <div class="rank-num">${i + 1}</div>
+          <div class="team-icon" style="background:${t.bg};color:${t.fg}">${t.abbr}</div>
+          <div class="team-info">
+            <div class="team-name-ja">${t.name}</div>
+            <div class="team-name-en">${t.abbr}</div>
+          </div>
+          <div class="drag-handle">⠿</div>`;
+
+        row.addEventListener('dragstart', e => {
+          dragId = id; dragLg = lg; dragDv = dv;
+          e.dataTransfer.effectAllowed = 'move';
+          setTimeout(() => row.classList.add('dragging'), 0);
+        });
+        row.addEventListener('dragend', () => {
+          row.classList.remove('dragging');
+          document.querySelectorAll('.team-row').forEach(r => {
+            r.classList.remove('drag-over-top', 'drag-over-bottom');
+          });
+          dragId = null; dragLg = null; dragDv = null;
+        });
+        row.addEventListener('dragover', e => {
+          e.preventDefault();
+          if (!dragId || dragLg !== lg || dragDv !== dv) return;
+          row.classList.remove('drag-over-top', 'drag-over-bottom');
+          const rect = row.getBoundingClientRect();
+          const mid = rect.top + rect.height / 2;
+          row.classList.add(e.clientY < mid ? 'drag-over-top' : 'drag-over-bottom');
+        });
+        row.addEventListener('dragleave', () => {
+          row.classList.remove('drag-over-top', 'drag-over-bottom');
+        });
+        row.addEventListener('drop', e => {
+          e.preventDefault();
+          row.classList.remove('drag-over-top', 'drag-over-bottom');
+          if (!dragId || dragLg !== lg || dragDv !== dv || dragId === id) return;
+
+          const arr = state[lg][dv];
+          const fromIdx = arr.indexOf(dragId);
+          const toIdx = arr.indexOf(id);
+          const rect = row.getBoundingClientRect();
+          const mid = rect.top + rect.height / 2;
+          const insertBefore = e.clientY < mid;
+
+          arr.splice(fromIdx, 1);
+          const newTo = arr.indexOf(id);
+          arr.splice(insertBefore ? newTo : newTo + 1, 0, dragId);
+          buildUI();
+        });
+
+        list.appendChild(row);
+      });
+
+      col.appendChild(list);
+      body.appendChild(col);
+    }
+
+    lgWrap.appendChild(body);
+    wrap.appendChild(lgWrap);
+
+    // リーグ間のスペース
+    if (lg === 'al') {
+      const spacer = document.createElement('div');
+      spacer.style.height = '20px';
+      wrap.appendChild(spacer);
+    }
+  }
+}
+
+function resetAll() {
+  for (const lg in LEAGUES) {
+    for (const dv in LEAGUES[lg].divisions) {
+      state[lg][dv] = LEAGUES[lg].divisions[dv].teams.map(t => t.id);
+    }
+  }
+  buildUI();
+}
+
+function buildCaptureCard() {
+  const year = new Date().getFullYear();
+  let html = `
+    <div class="cap-title">MLB ${year} 順位予想</div>
+    <div class="cap-sub">SEASON PREDICTION — #MLB順位予想${year}</div>`;
+
+  for (const lg in LEAGUES) {
+    const lgData = LEAGUES[lg];
+    html += `<div class="cap-league">
+      <div class="cap-lg-hd" style="${lgData.headerStyle}">${lgData.label}</div>
+      <div class="cap-divs">`;
+    for (const dv in lgData.divisions) {
+      html += `<div><div class="cap-div-title">${lgData.divisions[dv].label}</div>`;
+      state[lg][dv].forEach((id, i) => {
+        const t = getTeam(id);
+        html += `<div class="cap-row" data-rank="${i+1}">
+          <div class="cap-num">${i+1}</div>
+          <div class="cap-icon" style="background:${t.bg};color:${t.fg}">${t.abbr}</div>
+          <div class="cap-name">${t.name}</div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+    html += `</div></div>`;
+  }
+  html += `<div class="cap-footer">kyanaproducer.github.io</div>`;
+  document.getElementById('capture-card').innerHTML = html;
+}
+
+async function saveImage() {
+  buildCaptureCard();
+  try {
+    const canvas = await html2canvas(document.getElementById('capture-card'), {
+      backgroundColor: '#0a0a14', scale: 2, useCORS: true, logging: false,
+    });
+    const a = document.createElement('a');
+    a.download = `MLB_${new Date().getFullYear()}_順位予想.png`;
+    a.href = canvas.toDataURL('image/png');
+    a.click();
+  } catch(err) {
+    document.getElementById('error-banner').textContent = '画像保存に失敗しました: ' + err.message;
+    document.getElementById('error-banner').classList.add('show');
+    setTimeout(() => document.getElementById('error-banner').classList.remove('show'), 3000);
+  }
+}
+
+buildUI();
+</script>
+</body>
+</html>
