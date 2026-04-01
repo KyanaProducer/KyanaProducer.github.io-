@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ミッションチェックリスト — きゃなのおもちゃ箱</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700&family=Klee+One&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:      #fafaf8;
+    --bg2:     #f3f2ee;
+    --bg3:     #eceae4;
+    --text:    #2c2c2a;
+    --muted:   #888780;
+    --border:  #e0ddd6;
+    --acc:     #e06090;
+    --acc2:    #9b6fd6;
+    --green:   #4caf82;
+    --radius:  10px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; font-weight: 300; line-height: 1.7; min-height: 100vh; }
+
+  /* ── nav ── */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(250,250,248,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 32px; gap: 12px;
+  }
+  .nav-logo { font-family: 'Klee One', cursive; font-size: 14px; color: var(--muted); text-decoration: none; white-space: nowrap; }
+  .nav-logo:hover { color: var(--text); }
+  .nav-title { font-family: 'Klee One', cursive; font-size: 16px; color: var(--text); }
+  .nav-date { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  /* ── ヘッダー ── */
+  .page-header {
+    max-width: 860px; margin: 0 auto; padding: 40px 20px 24px;
+  }
+  .page-header h1 { font-family: 'Klee One', cursive; font-size: clamp(22px,4vw,32px); font-weight: 400; margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }
+  .page-header p  { font-size: 13px; color: var(--muted); }
+
+  /* ── 進捗バー ── */
+  .progress-wrap {
+    max-width: 860px; margin: 0 auto 0; padding: 0 20px 24px;
+  }
+  .progress-card {
+    background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 20px 24px;
+  }
+  .progress-top {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;
+  }
+  .progress-nums { display: flex; align-items: baseline; gap: 6px; }
+  .progress-big  { font-family: 'Klee One', cursive; font-size: 32px; color: var(--acc); line-height: 1; }
+  .progress-of   { font-size: 14px; color: var(--muted); }
+  .progress-pct  { font-size: 22px; font-weight: 700; color: var(--green); }
+  .progress-bar-bg { height: 10px; background: var(--bg3); border-radius: 999px; overflow: hidden; }
+  .progress-bar-fg { height: 100%; background: linear-gradient(90deg, var(--acc), var(--acc2)); border-radius: 999px; transition: width 0.4s ease; }
+  .progress-unlocked { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  /* ── フィルター・操作 ── */
+  .controls {
+    max-width: 860px; margin: 0 auto; padding: 16px 20px;
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  }
+  .filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .filter-btn {
+    font-size: 12px; font-family: 'Noto Sans JP', sans-serif; font-weight: 400;
+    padding: 6px 14px; border-radius: 999px; border: 1.5px solid var(--border);
+    background: #fff; color: var(--muted); cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  .filter-btn:hover  { border-color: var(--acc); color: var(--acc); }
+  .filter-btn.active { background: var(--acc); border-color: var(--acc); color: #fff; }
+
+  .spacer { flex: 1; }
+
+  .action-btn {
+    font-size: 12px; font-family: 'Noto Sans JP', sans-serif; font-weight: 700;
+    padding: 7px 16px; border-radius: 8px; border: none; cursor: pointer;
+    transition: transform 0.15s, opacity 0.15s;
+  }
+  .action-btn:hover  { transform: translateY(-1px); }
+  .action-btn:active { opacity: 0.85; transform: none; }
+  .btn-export { background: var(--acc2); color: #fff; }
+  .btn-import { background: var(--bg2); color: var(--text); border: 1.5px solid var(--border); }
+  .btn-reset  { background: var(--bg2); color: var(--muted); border: 1.5px solid var(--border); }
+
+  /* ── テーブル ── */
+  .table-wrap {
+    max-width: 860px; margin: 0 auto; padding: 0 20px 60px;
+  }
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  thead th {
+    background: var(--bg2); font-size: 12px; font-weight: 700; color: var(--muted);
+    padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border);
+    letter-spacing: 0.04em; white-space: nowrap;
+  }
+  thead th:first-child { width: 52px; text-align: center; }
+  thead th:nth-child(2) { width: 96px; }
+
+  tbody tr {
+    border-bottom: 1px solid var(--bg2);
+    transition: background 0.15s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #fdf8fb; }
+  tbody tr.done { background: #f8fdf9; }
+  tbody tr.hidden { display: none; }
+
+  td { padding: 10px 14px; font-size: 13px; vertical-align: middle; }
+  td:first-child { text-align: center; }
+
+  /* チェックボックス */
+  .cb-wrap { display: flex; align-items: center; justify-content: center; }
+  input[type="checkbox"] { display: none; }
+  .cb-box {
+    width: 22px; height: 22px; border-radius: 6px;
+    border: 2px solid var(--border); background: #fff;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+  }
+  .cb-box:hover { border-color: var(--green); }
+  input[type="checkbox"]:checked + .cb-box {
+    background: var(--green); border-color: var(--green);
+  }
+  input[type="checkbox"]:checked + .cb-box::after {
+    content: ''; display: block;
+    width: 11px; height: 6px;
+    border-left: 2px solid #fff; border-bottom: 2px solid #fff;
+    transform: rotate(-45deg) translateY(-2px);
+  }
+
+  .date-cell { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .date-cell.unlocked { color: var(--text); font-weight: 400; }
+  .date-cell.today    { color: var(--acc); font-weight: 700; }
+
+  .idol-cell { font-weight: 400; }
+  .song-cell  { color: var(--muted); font-size: 12px; }
+  .song-cell.highlight { color: var(--acc); font-weight: 700; font-size: 13px; }
+
+  /* done行 */
+  tr.done .idol-cell { color: var(--green); }
+  tr.done .song-cell { color: #aaa; }
+  tr.done .date-cell { color: #aaa; }
+
+  /* 解禁バッジ */
+  .badge-unlocked { display: inline-block; font-size: 10px; color: var(--green); background: rgba(76,175,130,0.1); border: 1px solid rgba(76,175,130,0.25); border-radius: 999px; padding: 1px 7px; margin-left: 4px; vertical-align: middle; }
+  .badge-today    { display: inline-block; font-size: 10px; color: var(--acc);   background: rgba(224,96,144,0.1);  border: 1px solid rgba(224,96,144,0.25);  border-radius: 999px; padding: 1px 7px; margin-left: 4px; vertical-align: middle; }
+
+  /* インポートモーダル */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    display: none;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: #fff; border-radius: var(--radius); padding: 28px 28px 24px;
+    max-width: 480px; width: calc(100% - 40px); box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+  }
+  .modal h2 { font-family: 'Klee One', cursive; font-size: 18px; font-weight: 400; margin-bottom: 8px; }
+  .modal p  { font-size: 13px; color: var(--muted); margin-bottom: 14px; line-height: 1.7; }
+  .modal textarea {
+    width: 100%; height: 120px; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-family: 'Noto Sans JP', sans-serif; font-size: 12px;
+    resize: vertical; outline: none; transition: border-color 0.2s;
+  }
+  .modal textarea:focus { border-color: var(--acc); }
+  .modal-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 14px; }
+  .modal-error { font-size: 12px; color: var(--acc); margin-top: 6px; display: none; }
+  .modal-error.show { display: block; }
+
+  footer { border-top: 1px solid var(--border); text-align: center; padding: 24px; }
+  footer p { font-size: 12px; color: #bbb; }
+  footer a { color: var(--acc); text-decoration: none; }
+
+  @media (max-width: 560px) {
+    nav { padding: 10px 16px; }
+    .controls { padding: 12px 16px; }
+    .table-wrap { padding: 0 16px 48px; }
+    td, thead th { padding: 8px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="../index.html">← ミリシタ お役立ちツール</a>
+  <span class="nav-title">🎯 ミッションチェックリスト</span>
+  <span class="nav-date" id="nav-date"></span>
+</nav>
+
+<!-- ヘッダー -->
+<div class="page-header">
+  <h1>🎯 ミッションチェックリスト</h1>
+  <p>各アイドルのミッションをクリアしたらチェックを入れてください。右上のエクスポートで進捗を保存できます。</p>
+</div>
+
+<!-- 進捗バー -->
+<div class="progress-wrap">
+  <div class="progress-card">
+    <div class="progress-top">
+      <div class="progress-nums">
+        <span class="progress-big" id="prog-done">0</span>
+        <span class="progress-of" id="prog-of">/ 52 消化</span>
+      </div>
+      <span class="progress-pct" id="prog-pct">0%</span>
+    </div>
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fg" id="prog-bar" style="width:0%"></div>
+    </div>
+    <div class="progress-unlocked" id="prog-unlocked"></div>
+  </div>
+</div>
+
+<!-- コントロール -->
+<div class="controls">
+  <div class="filter-group">
+    <button class="filter-btn active" onclick="setFilter('all', this)">すべて</button>
+    <button class="filter-btn" onclick="setFilter('done', this)">✅ 完了</button>
+    <button class="filter-btn" onclick="setFilter('undone', this)">⬜ 未完了</button>
+    <button class="filter-btn" onclick="setFilter('unlocked', this)">🔓 解禁済み</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="action-btn btn-import" onclick="openImport()">📥 インポート</button>
+  <button class="action-btn btn-export" onclick="doExport()">📤 エクスポート</button>
+  <button class="action-btn btn-reset" onclick="doReset()">🔄 リセット</button>
+</div>
+
+<!-- テーブル -->
+<div class="table-wrap">
+  <table id="mission-table">
+    <thead>
+      <tr>
+        <th>完了</th>
+        <th>解禁日</th>
+        <th>アイドル</th>
+        <th>課題曲</th>
+      </tr>
+    </thead>
+    <tbody id="mission-tbody">
+    </tbody>
+  </table>
+</div>
+
+<!-- インポートモーダル -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeImportOutside(event)">
+  <div class="modal">
+    <h2>📥 インポート</h2>
+    <p>エクスポートしたテキストを貼り付けてください。現在のチェック状態が上書きされます。</p>
+    <textarea id="import-textarea" placeholder="エクスポートしたテキストをここに貼り付け..."></textarea>
+    <div class="modal-error" id="modal-error">データの形式が正しくありません</div>
+    <div class="modal-btns">
+      <button class="action-btn btn-reset" onclick="closeImport()">キャンセル</button>
+      <button class="action-btn btn-export" onclick="doImport()">読み込む</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p><a href="../index.html">← ミリシタ お役立ちツール一覧</a>　&copy; 2025 きゃなのおもちゃ箱（出張編）</p>
+</footer>
+
+<script>
+// =====================================================
+// ミッションデータ（52件）
+// =====================================================
+const MISSIONS = [
+  { date:'2025/7/23',  idol:'春日未来',   song:'Brand New Theater!' },
+  { date:'2025/7/30',  idol:'木下ひなた', song:'UNION!!' },
+  { date:'2025/8/6',   idol:'三浦あずさ', song:'Flyers!!!' },
+  { date:'2025/8/13',  idol:'舞浜歩',     song:'Glow Map' },
+  { date:'2025/8/20',  idol:'伊吹翼',     song:'Harmony 4 You' },
+  { date:'2025/8/27',  idol:'高坂海美',   song:'夢にかけるRainbow' },
+  { date:'2025/9/3',   idol:'矢吹可奈',   song:'Crossing!' },
+  { date:'2025/9/10',  idol:'篠宮可憐',   song:'グッドサイン' },
+  { date:'2025/9/17',  idol:'菊地真',     song:'7Days A Week!!' },
+  { date:'2025/9/24',  idol:'豊川風花',   song:'Brand New Theater!' },
+  { date:'2025/10/1',  idol:'最上静香',   song:'UNION!!' },
+  { date:'2025/10/8',  idol:'永吉昴',     song:'Flyers!!!' },
+  { date:'2025/10/15', idol:'ジュリア',   song:'Glow Map' },
+  { date:'2025/10/22', idol:'田中琴葉',   song:'Harmony 4 You' },
+  { date:'2025/10/29', idol:'我那覇響',   song:'夢にかけるRainbow' },
+  { date:'2025/11/5',  idol:'二階堂千鶴', song:'Crossing!' },
+  { date:'2025/11/12', idol:'島原エレナ', song:'グッドサイン' },
+  { date:'2025/11/19', idol:'周防桃子',   song:'7Days A Week!!' },
+  { date:'2025/11/26', idol:'天空橋朋花', song:'Brand New Theater!' },
+  { date:'2025/12/3',  idol:'百瀬莉緒',   song:'UNION!!' },
+  { date:'2025/12/10', idol:'星井美希',   song:'Flyers!!!' },
+  { date:'2025/12/17', idol:'野々原茜',   song:'Glow Map' },
+  { date:'2025/12/24', idol:'中谷育',     song:'Harmony 4 You' },
+  { date:'2025/12/31', idol:'萩原雪歩',   song:'夢にかけるRainbow' },
+  { date:'2026/1/7',   idol:'高山紗代子', song:'Crossing!' },
+  { date:'2026/1/14',  idol:'エミリー',   song:'グッドサイン' },
+  { date:'2026/1/21',  idol:'北沢志保',   song:'7Days A Week!!' },
+  { date:'2026/1/28',  idol:'四条貴音',   song:'Brand New Theater!' },
+  { date:'2026/2/4',   idol:'真壁瑞希',   song:'UNION!!' },
+  { date:'2026/2/11',  idol:'徳川まつり', song:'Flyers!!!' },
+  { date:'2026/2/18',  idol:'横山奈緒',   song:'Glow Map' },
+  { date:'2026/2/25',  idol:'箱崎星梨花', song:'Harmony 4 You' },
+  { date:'2026/3/4',   idol:'如月千早',   song:'夢にかけるRainbow' },
+  { date:'2026/3/11',  idol:'ロコ',       song:'Crossing!' },
+  { date:'2026/3/18',  idol:'七尾百合子', song:'グッドサイン' },
+  { date:'2026/3/25',  idol:'佐竹美奈子', song:'7Days A Week!!' },
+  { date:'2026/4/1',   idol:'高槻やよい', song:'Brand New Theater!' },
+  { date:'2026/4/8',   idol:'桜守歌織',   song:'UNION!!' },
+  { date:'2026/4/15',  idol:'福田のり子', song:'Flyers!!!' },
+  { date:'2026/4/22',  idol:'天海春香',   song:'Glow Map' },
+  { date:'2026/4/29',  idol:'所恵美',     song:'Harmony 4 You' },
+  { date:'2026/5/6',   idol:'宮尾美也',   song:'夢にかけるRainbow' },
+  { date:'2026/5/13',  idol:'大神環',     song:'Crossing!' },
+  { date:'2026/5/20',  idol:'水瀬伊織',   song:'グッドサイン' },
+  { date:'2026/5/27',  idol:'北上麗花',   song:'7Days A Week!!' },
+  { date:'2026/6/3',   idol:'双海亜美',   song:'Brand New Theater!' },
+  { date:'2026/6/10',  idol:'双海真美',   song:'UNION!!' },
+  { date:'2026/6/17',  idol:'白石紬',     song:'Flyers!!!' },
+  { date:'2026/6/24',  idol:'望月杏奈',   song:'Glow Map' },
+  { date:'2026/7/1',   idol:'松田亜利沙', song:'Harmony 4 You' },
+  { date:'2026/7/8',   idol:'馬場このみ', song:'夢にかけるRainbow' },
+  { date:'2026/7/15',  idol:'秋月律子',   song:'Crossing!' },
+];
+
+// Brand New Theater! は画像で太字 → ハイライト対象
+const HIGHLIGHT_SONGS = ['Brand New Theater!'];
+
+// チェック状態
+let checks = new Array(MISSIONS.length).fill(false);
+let currentFilter = 'all';
+
+// 今日の日付
+function today() {
+  const d = new Date();
+  return `${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}`;
+}
+function parseDate(str) {
+  const [y,m,d] = str.split('/').map(Number);
+  return new Date(y, m-1, d);
+}
+function isUnlocked(dateStr) {
+  return parseDate(dateStr) <= new Date();
+}
+function isToday(dateStr) {
+  return dateStr === today();
+}
+
+// nav日付
+function updateNavDate() {
+  const d = new Date();
+  const wd = ['日','月','火','水','木','金','土'][d.getDay()];
+  document.getElementById('nav-date').textContent =
+    `今日: ${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}（${wd}）`;
+}
+
+// 進捗更新
+function updateProgress() {
+  const done = checks.filter(Boolean).length;
+  const total = MISSIONS.length;
+  const pct = total ? Math.round(done / total * 100) : 0;
+  const unlocked = MISSIONS.filter(m => isUnlocked(m.date)).length;
+
+  document.getElementById('prog-done').textContent = done;
+  document.getElementById('prog-of').textContent   = `/ ${total} 消化`;
+  document.getElementById('prog-pct').textContent  = pct + '%';
+  document.getElementById('prog-bar').style.width  = pct + '%';
+  document.getElementById('prog-unlocked').textContent =
+    `（現在 ${unlocked} 件解禁済み）`;
+}
+
+// テーブル描画
+function renderTable() {
+  const tbody = document.getElementById('mission-tbody');
+  tbody.innerHTML = '';
+  MISSIONS.forEach((m, i) => {
+    const tr = document.createElement('tr');
+    if (checks[i]) tr.classList.add('done');
+
+    const unlocked = isUnlocked(m.date);
+    const todayFlag = isToday(m.date);
+
+    // フィルター
+    let show = true;
+    if (currentFilter === 'done'     && !checks[i])  show = false;
+    if (currentFilter === 'undone'   &&  checks[i])  show = false;
+    if (currentFilter === 'unlocked' && !unlocked)    show = false;
+    if (!show) tr.classList.add('hidden');
+
+    // チェックボックス
+    const tdCb = document.createElement('td');
+    const label = document.createElement('label');
+    label.className = 'cb-wrap';
+    label.htmlFor = `cb-${i}`;
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.id = `cb-${i}`; cb.checked = checks[i];
+    cb.addEventListener('change', () => onCheck(i, cb.checked));
+    const box = document.createElement('div');
+    box.className = 'cb-box';
+    label.appendChild(cb); label.appendChild(box);
+    tdCb.appendChild(label);
+
+    // 日付
+    const tdDate = document.createElement('td');
+    const dateSpan = document.createElement('span');
+    dateSpan.className = 'date-cell' + (todayFlag ? ' today' : unlocked ? ' unlocked' : '');
+    dateSpan.textContent = m.date;
+    if (todayFlag) {
+      const badge = document.createElement('span');
+      badge.className = 'badge-today'; badge.textContent = '今日';
+      tdDate.appendChild(dateSpan); tdDate.appendChild(badge);
+    } else if (unlocked) {
+      const badge = document.createElement('span');
+      badge.className = 'badge-unlocked'; badge.textContent = '解禁済';
+      tdDate.appendChild(dateSpan); tdDate.appendChild(badge);
+    } else {
+      tdDate.appendChild(dateSpan);
+    }
+
+    // アイドル
+    const tdIdol = document.createElement('td');
+    tdIdol.className = 'idol-cell';
+    tdIdol.textContent = m.idol;
+
+    // 課題曲
+    const tdSong = document.createElement('td');
+    tdSong.className = 'song-cell' + (HIGHLIGHT_SONGS.includes(m.song) ? ' highlight' : '');
+    tdSong.textContent = m.song;
+
+    tr.append(tdCb, tdDate, tdIdol, tdSong);
+    tbody.appendChild(tr);
+  });
+  updateProgress();
+}
+
+function onCheck(i, val) {
+  checks[i] = val;
+  const row = document.getElementById('mission-tbody').rows[i];
+  if (val) row.classList.add('done'); else row.classList.remove('done');
+
+  // フィルターに応じて行表示切替
+  let show = true;
+  if (currentFilter === 'done'   && !val)  show = false;
+  if (currentFilter === 'undone' &&  val)  show = false;
+  if (!show) row.classList.add('hidden'); else row.classList.remove('hidden');
+
+  updateProgress();
+}
+
+// フィルター
+function setFilter(type, btn) {
+  currentFilter = type;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+// エクスポート
+function doExport() {
+  const data = {
+    v: 1,
+    exported: new Date().toISOString(),
+    checks: checks.map((c, i) => c ? i : null).filter(v => v !== null),
+  };
+  const text = JSON.stringify(data);
+
+  // クリップボードにコピー
+  navigator.clipboard.writeText(text).then(() => {
+    alert('📤 チェック状態をクリップボードにコピーしました！\nメモ帳などに貼り付けて保存してください。');
+  }).catch(() => {
+    // フォールバック: prompt で表示
+    prompt('以下のテキストをコピーして保存してください：', text);
+  });
+}
+
+// インポート
+function openImport() {
+  document.getElementById('import-textarea').value = '';
+  document.getElementById('modal-error').classList.remove('show');
+  document.getElementById('modal-overlay').classList.add('show');
+}
+function closeImport() {
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+function closeImportOutside(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeImport();
+}
+function doImport() {
+  const text = document.getElementById('import-textarea').value.trim();
+  const errEl = document.getElementById('modal-error');
+  try {
+    const data = JSON.parse(text);
+    if (!data.checks || !Array.isArray(data.checks)) throw new Error();
+    checks = new Array(MISSIONS.length).fill(false);
+    data.checks.forEach(i => { if (i >= 0 && i < MISSIONS.length) checks[i] = true; });
+    closeImport();
+    renderTable();
+  } catch {
+    errEl.classList.add('show');
+  }
+}
+
+// リセット
+function doReset() {
+  if (!confirm('チェック状態をすべてリセットしますか？')) return;
+  checks = new Array(MISSIONS.length).fill(false);
+  renderTable();
+}
+
+// 初期化
+updateNavDate();
+renderTable();
+</script>
+</body>
+</html>
