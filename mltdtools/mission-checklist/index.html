@@ -326,6 +326,9 @@ const MISSIONS = [
   { date:'2026/7/15',  idol:'秋月律子',   song:'Crossing!' },
 ];
 
+// 太字対象の楽曲はなし
+const HIGHLIGHT_SONGS = [];
+  
 // チェック状態
 let checks = new Array(MISSIONS.length).fill(false);
 let currentFilter = 'all';
@@ -424,7 +427,7 @@ function renderTable() {
 
     // 課題曲
     const tdSong = document.createElement('td');
-    tdSong.className = 'song-cell' + (HIGHLIGHT_SONGS.includes(m.song) ? ' highlight' : '');
+    tdSong.className = 'song-cell';
     tdSong.textContent = m.song;
 
     tr.append(tdCb, tdDate, tdIdol, tdSong);
